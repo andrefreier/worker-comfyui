@@ -88,6 +88,15 @@ ENV PIP_NO_INPUT=1
 COPY scripts/comfy-manager-set-mode.sh /usr/local/bin/comfy-manager-set-mode
 RUN chmod +x /usr/local/bin/comfy-manager-set-mode
 
+# === Flux.2 dev Modelle herunterladen ===
+RUN mkdir -p /comfyui/models/checkpoints && \
+    wget -q --show-progress -O /comfyui/models/checkpoints/flux2-dev.sft \
+    https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/flux2-dev.sft && \
+    wget -q --show-progress -O /comfyui/models/vae/ae.sft \
+    https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/ae.sft && \
+    wget -q --show-progress -O /comfyui/models/text_encoders/t5xxl_fp16.sft \
+    https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/t5xxl_fp16.sft
+
 # Set the default command to run when starting the container
 CMD ["/start.sh"]
 
