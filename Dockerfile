@@ -88,13 +88,17 @@ ENV PIP_NO_INPUT=1
 COPY scripts/comfy-manager-set-mode.sh /usr/local/bin/comfy-manager-set-mode
 RUN chmod +x /usr/local/bin/comfy-manager-set-mode
 
-# === Flux.2 dev Modelle herunterladen ===
+# Flux.2 dev Modelle herunterladen (Apache 2.0, kompatibel mit ComfyUI)
 RUN mkdir -p /comfyui/models/checkpoints && \
-    wget -q --show-progress -O /comfyui/models/checkpoints/flux2-dev.sft \
-    https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/flux2-dev.sft && \
+    wget -q --show-progress -O /comfyui/models/checkpoints/flux2-dev-fp8.safetensors \
+    https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/flux2_dev_fp8mixed.safetensors && \
+    mkdir -p /comfyui/models/vae && \
     wget -q --show-progress -O /comfyui/models/vae/ae.sft \
     https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/ae.sft && \
-    wget -q --show-progress -O /comfyui/models/text_encoders/t5xxl_fp16.sft \
+    mkdir -p /comfyui/models/clip && \
+    wget -q --show-progress -O /comfyui/models/clip/clip_l.safetensors \
+    https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors && \
+    wget -q --show-progress -O /comfyui/models/clip/t5xxl_fp16.safetensors \
     https://huggingface.co/black-forest-labs/FLUX.2-dev/resolve/main/t5xxl_fp16.sft
 
 # Set the default command to run when starting the container
