@@ -134,47 +134,21 @@ def validate_input(job_input):
     Args:
         job_input (dict): The input data to validate.
 
-    Returns:
-        tuple: A tuple containing the validated data and an error message, if any.
-               The structure is (validated_data, error_message).
-    """
-    # Validate if job_input is provided
-    if job_input is None:
-        return None, "Please provide input"
-
-    # Check if input is a string and try to parse it as JSON
-    if isinstance(job_input, str):
-        try:
-            job_input = json.loads(job_input)
-        except json.JSONDecodeError:
-            return None, "Invalid JSON format in input"
-
-    # Validate 'workflow' in input
-    workflow = job_input.get("workflow")
-    if workflow is None:
-        return None, "Missing 'workflow' parameter"
-
-    # Validate 'images' in input, if provided
-    images = job_input.get("images")
-    if images is not None:
-        if not isinstance(images, list) or not all(
-            "name" in image and "image" in image for image in images
-        ):
-            return (
-                None,
-                "'images' must be a list of objects with 'name' and 'image' keys",
-            )
-
-    # Optional: API key for Comfy.org API Nodes, passed per-request
-    comfy_org_api_key = job_input.get("comfy_org_api_key")
-
-    # Return validated data and no error
+def validate_input(job_input):
+    # ... existing code ...
+    
+    # Add these lines after the images validation:
+    lora_url = job_input.get("lora_url")
+    lora_filename = job_input.get("lora_filename")
+    
+    # Return validated data with new fields
     return {
         "workflow": workflow,
         "images": images,
         "comfy_org_api_key": comfy_org_api_key,
+        "lora_url": lora_url,
+        "lora_filename": lora_filename,
     }, None
-
 
 def check_server(url, retries=500, delay=50):
     """
@@ -295,6 +269,45 @@ def upload_images(images):
         "details": responses,
     }
 
+def download_lora_if_needed(lora_url, lora_filename):
+    """
+    Download a LoRA file if it doesn't exist locally.
+    
+    Args:
+        lora_url (str): URL to download the LoRA from
+        lora_filename (str): Filename to save the LoRA as
+    
+    Returns:
+        dict: Status of the download operation
+    """
+    if not lora_url or not lora_filename:
+        return {"status": "skipped", "message": "No LoRA URL or filename provided"}
+    
+    lora_dir = "/comfyui/models/loras"
+    lora_path = os.path.join(lora_dir, lora_filename)
+    
+    # Check if file already exists
+    if os.path.exists(lora_path):
+        print(f"worker-comfyui - LoRA already exists: {lora_path}")
+        return {"status": "exists", "path": lora_path}
+    
+    print(f"worker-comfyui - Downloading LoRA from {lora_url} to {lora_path}...")
+    
+    try:
+        os.makedirs(lora_dir, exist_ok=True)
+        response = requests.get(lora_url, stream=True, timeout=300)
+        response.raise_for_status()
+        
+        with open(lora_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"worker-comfyui - LoRA downloaded successfully: {lora_path}")
+        return {"status": "downloaded", "path": lora_path}
+    except Exception as e:
+        error_msg = f"Failed to download LoRA: {e}"
+        print(f"worker-comfyui - {error_msg}")
+        return {"status": "error", "message": error_msg}
 
 def get_available_models():
     """
@@ -533,6 +546,14 @@ def handler(job):
                 "error": "Failed to upload one or more input images",
                 "details": upload_result["details"],
             }
+           
+    # Download LoRA if provided
+    lora_url = validated_data.get("lora_url")
+    lora_filename = validated_data.get("lora_filename")
+    if lora_url and lora_filename:
+        lora_result = download_lora_if_needed(lora_url, lora_filename)
+        if lora_result["status"] == "error":
+            return {"error": lora_result["message"]}
 
     ws = None
     client_id = str(uuid.uuid4())
