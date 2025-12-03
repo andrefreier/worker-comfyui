@@ -134,21 +134,24 @@ def validate_input(job_input):
     Args:
         job_input (dict): The input data to validate.
 
-def validate_input(job_input):
-    # ... existing code ...
+    Returns:
+        tuple: (validated_data, error_message)
+    """
+    workflow = job_input.get("workflow")
+    if not workflow:
+        return None, "Missing 'workflow' in input"
     
-    # Add these lines after the images validation:
+    if isinstance(workflow, str):
+        try:
+            workflow = json.loads(workflow)
+        except json.JSONDecodeError:
+            return None, "Invalid JSON in 'workflow'"
+    
+    images = job_input.get("images")
+    comfy_org_api_key = job_input.get("comfy_org_api_key")
     lora_url = job_input.get("lora_url")
-    lora_filename = job_input.get("lora_filename")
-    
-    # Return validated data with new fields
-    return {
-        "workflow": workflow,
-        "images": images,
-        "comfy_org_api_key": comfy_org_api_key,
-        "lora_url": lora_url,
-        "lora_filename": lora_filename,
-    }, None
+    lora_filename = job_input.ge
+
 
 def check_server(url, retries=500, delay=50):
     """
